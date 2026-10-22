@@ -162,4 +162,3 @@ while (!salir) {
 
 rl.close();
 
-export { };
