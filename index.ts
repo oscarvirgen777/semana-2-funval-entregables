@@ -33,27 +33,52 @@ let tareas: Tarea[] = [
 
 let nextId: number = 4;
 
+/* simular guardado entregable de viernes */
+function saveToDB(tarea: Tarea): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log(`💾 Tarea "${tarea.title}" guardada en base de datos.`);
+      resolve();
+    }, 2000);
+  });
+}
 // ==========================================
 // 4. Arrow functions (miércoles)
 // ==========================================
-const addTask = (title: string): void => {
-  tareas.push({ id: nextId, title: title, completed: false });
-  nextId++;
-  console.log(`✅ Tarea "${title}" agregada.`);
+const addTask = async (title: string): Promise<void> => {
+  try {
+    if (title.trim() === "") {
+      throw new Error("El título no puede estar vacío.");
+    }
+
+    const nuevaTarea: Tarea = { id: nextId, title, completed: false };
+    nextId++;
+
+    await saveToDB(nuevaTarea);
+
+    tareas.push(nuevaTarea);
+    console.log(` Tarea "${title}" agregada.`);
+  } catch (error) {
+    console.error(` Error: ${(error as Error).message}`);
+  }
 };
 
-const removeTask = (): void => {
-  if (tareas.length === 0) {
-    console.log("⚠️ No hay tareas para eliminar.");
+// RETO EXTRA: eliminar por id
+const removeTask = (id: number): void => {
+  const index = tareas.findIndex((t) => t.id === id);
+
+  if (index === -1) {
+    console.log(` No existe una tarea con id ${id}.`);
     return;
   }
-  const eliminada: Tarea = tareas.pop() as Tarea;
-  console.log(`🗑️ Tarea eliminada: "${eliminada.title}"`);
+  const eliminada: Tarea = tareas[index];
+  tareas.splice(index, 1);
+  console.log(` Tarea eliminada: "${eliminada.title}"`);
 };
+// ==========================================
+// Nuevas funciones (jueves)
+// ==========================================
 
-// ==========================================
-// 2. Nuevas funciones (jueves)
-// ==========================================
 const markCompleted = (id: number): void => {
   const tarea = tareas.find((t) => t.id === id);
   if (tarea) {
@@ -95,12 +120,16 @@ const listTasks = (): void => {
 // ==========================================
 // 4. Menú
 // ==========================================
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));   
+
 let salir: boolean = false;
 
 while (!salir) {
+  
   console.log("\n========== MENÚ DE TAREAS ==========");
   console.log("1. Agregar tarea");
-  console.log("2. Eliminar última tarea");
+  console.log("2. Eliminar tarea por id");
   console.log("3. Listar tareas");
   console.log("4. Marcar como completada");
   console.log("5. Ver solo pendientes");
@@ -112,15 +141,34 @@ while (!salir) {
 
   if (opcion === "1") {
     const titulo: string = await rl.question("Título de la tarea: ");
-    addTask(titulo);
+     await addTask(titulo);
+
+     /* actualizado */
   } else if (opcion === "2") {
-    removeTask();
+     listTasks();
+     const idStr: string = await rl.question("Id de la tarea a eliminar: ");
+    const id = parseInt(idStr, 10);
+    if (isNaN(id)) {
+      console.log(" Id inválido.");
+    } else {
+      removeTask(id);
+    }
   } else if (opcion === "3") {
     listTasks();
-
-} else if (opcion === "4") {
-  const idStr: string = await rl.question("Ingresá el id de la tarea: ");
-  markCompleted(parseInt(idStr));
+/* se actualizo para ver las tareas pendientes */
+  } else if (opcion === "4") {
+    const pendientes = filterPending();
+    if (pendientes.length === 0) {
+      console.log(" No hay tareas pendientes para marcar.");
+    } else {
+      console.log("\n Tareas pendientes:");
+      pendientes.forEach((t) => {
+        const { id, title } = t;
+        console.log(`  [${id}] ${title}`);
+      });
+      const idStr: string = await rl.question("Ingresá el id de la tarea a completar: ");
+      markCompleted(parseInt(idStr));
+    }
   
   } else if (opcion === "5") {
     const pendientes = filterPending();
@@ -148,6 +196,9 @@ while (!salir) {
   } else {
     console.log("❌ Opción inválida.");
   }
-}   
+  if (!salir) {
+    await delay(3000);
+  }
+}
 
 rl.close();
